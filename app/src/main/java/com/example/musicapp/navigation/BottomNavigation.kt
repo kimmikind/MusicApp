@@ -21,7 +21,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 fun BottomNavigation(
     navController: NavController
 ) {
-    val listItems = listOf(BottomItem.LocalTracks,BottomItem.LocalTracks)
+    val listItems = listOf(BottomItem.LocalTracks,BottomItem.ApiTracks)
     NavigationBar(
         containerColor = Color.White
     )

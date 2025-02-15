@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.musicapp.R
-import com.example.musicapp.data.local.LocalTrack
+import com.example.musicapp.data.LocalTrack
 
 @Composable
 fun TrackItem(track: LocalTrack, onClick: () -> Unit) {
@@ -32,7 +32,7 @@ fun TrackItem(track: LocalTrack, onClick: () -> Unit) {
     ) {
         // Обложка трека
         AsyncImage(
-            model = track.coverPath ?: R.drawable.placeholder, // Заглушка, если обложки нет
+            model = track.coverUrl ?: R.drawable.placeholder, // Заглушка, если обложки нет
             contentDescription = "Track Cover",
             modifier = Modifier
                 .size(56.dp)

@@ -59,4 +59,7 @@ dependencies {
 
     //navigation
     implementation (libs.androidx.navigation.compose)
+    //get album cover
+    implementation (libs.coil.compose)
+
 }

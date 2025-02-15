@@ -1,10 +1,10 @@
 package com.example.musicapp.data
 
-data class Track(
+data class LocalTrack (
     val id: Long,
     val title: String,
     val artist: String,
-    val album: String?,
     val coverUrl: String?,
+    val filePath: String,
     val duration: Long // in milliseconds
 )

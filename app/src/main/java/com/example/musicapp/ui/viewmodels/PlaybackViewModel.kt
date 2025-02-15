@@ -1,10 +1,16 @@
 package com.example.musicapp.ui.viewmodels
 
+import android.media.session.PlaybackState
 import androidx.lifecycle.ViewModel
+import com.example.musicapp.data.LocalTrack
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class PlaybackViewModel : ViewModel() {
+
+    private val _currentTrack = MutableStateFlow<LocalTrack?>(null)
+    val currentTrack: StateFlow<LocalTrack?> = _currentTrack.asStateFlow()
 
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Paused)
     val playbackState: StateFlow<PlaybackState> = _playbackState
@@ -14,6 +20,8 @@ class PlaybackViewModel : ViewModel() {
 
     private val _trackDuration = MutableStateFlow(0L)
     val trackDuration: StateFlow<Long> = _trackDuration
+
+
 
     fun play() {
         _playbackState.value = PlaybackState.Playing
@@ -38,9 +46,9 @@ class PlaybackViewModel : ViewModel() {
     fun previousTrack() {
         // Logic to switch to the previous track
     }
+    sealed class PlaybackState {
+        object Playing : PlaybackState()
+        object Paused : PlaybackState()
+    }
 }
 
-sealed class PlaybackState {
-    object Playing : PlaybackState()
-    object Paused : PlaybackState()
-}

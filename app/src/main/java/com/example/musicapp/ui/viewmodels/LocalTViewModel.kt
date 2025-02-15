@@ -1,15 +1,25 @@
 package com.example.musicapp.ui.viewmodels
 
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.musicapp.data.local.LocalTRepository
-import com.example.musicapp.data.local.LocalTrack
+import com.example.musicapp.MainActivity.Companion.REQUEST_CODE
+import com.example.musicapp.data.repository.LocalTRepository
+import com.example.musicapp.data.LocalTrack
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class LocalTrackViewModel(private val repository: LocalTRepository) : ViewModel() {
+
 
     private val _tracks = MutableStateFlow<List<LocalTrack>>(emptyList())
     val tracks: StateFlow<List<LocalTrack>> = _tracks.asStateFlow()
@@ -20,9 +30,9 @@ class LocalTrackViewModel(private val repository: LocalTRepository) : ViewModel(
     private val _filteredTracks = MutableStateFlow<List<LocalTrack>>(emptyList())
     val filteredTracks: StateFlow<List<LocalTrack>> = _filteredTracks.asStateFlow()
 
-    init {
+    /*init {
         loadTracks()
-    }
+    }*/
 
     fun loadTracks() {
         viewModelScope.launch {
@@ -30,6 +40,9 @@ class LocalTrackViewModel(private val repository: LocalTRepository) : ViewModel(
             _filteredTracks.value = _tracks.value
         }
     }
+
+
+
 
      fun searchTracks(query: String) {
 
@@ -42,7 +55,7 @@ class LocalTrackViewModel(private val repository: LocalTRepository) : ViewModel(
     private val _currentTrack = MutableStateFlow<LocalTrack?>(null)
     val currentTrack: StateFlow<LocalTrack?> = _currentTrack.asStateFlow()
 
-    fun loadTrackById(trackId: Long) {
+    fun getTrackById(trackId: Long) {
         viewModelScope.launch {
             _currentTrack.value = repository.getLocalTrackById(trackId)
         }

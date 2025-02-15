@@ -1,16 +1,26 @@
-package com.example.musicapp.data.local
+package com.example.musicapp.data.repository
 
 import android.content.ContentResolver
 import android.content.Context
+import android.content.pm.PackageManager
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
+import androidx.core.content.ContextCompat
+import com.example.musicapp.data.LocalTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.Manifest
+import android.app.Activity
+import androidx.core.app.ActivityCompat
+import com.example.musicapp.MainActivity.Companion.REQUEST_CODE
+
 
 class LocalTRepository(private val context: Context) {
 
@@ -25,7 +35,7 @@ class LocalTRepository(private val context: Context) {
     /**
      * Получает все локальные треки из хранилища устройства.
      */
-    suspend fun getAllTracks(): List<LocalTrack> = withContext(Dispatchers.IO) {
+    /*suspend fun getAllTracks(): List<LocalTrack> = withContext(Dispatchers.IO) {
         val tracks = mutableListOf<LocalTrack>()
         val contentResolver: ContentResolver = context.contentResolver
 
@@ -63,6 +73,7 @@ class LocalTRepository(private val context: Context) {
                 val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                 val artistColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
                 val dataColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
+                val durationColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
 
                 while (it.moveToNext()) {
                     val id = it.getLong(idColumn)
@@ -77,7 +88,7 @@ class LocalTRepository(private val context: Context) {
                     } else {
                         null
                     }
-
+                    val duration = it.getLong(durationColumn)
 
                     // Создаем объект LocalTrack и добавляем его в список
                     tracks.add(
@@ -85,8 +96,9 @@ class LocalTRepository(private val context: Context) {
                             id = id,
                             title = title,
                             artist = artist,
-                            coverPath = coverPath, // Обложка не доступна через MediaStore
-                            filePath = filePath
+                            coverUrl = coverPath, // Обложка не доступна через MediaStore
+                            filePath = filePath,
+                            duration = duration
                         )
                     )
                 }
@@ -96,7 +108,98 @@ class LocalTRepository(private val context: Context) {
         } finally {
             cursor?.close()
         }
+        Log.d("LocalTRepository", "Loaded ${tracks.size} tracks")
+        return@withContext tracks
+    }*/
 
+    suspend fun getAllTracks(): List<LocalTrack> = withContext(Dispatchers.IO) {
+
+
+        val tracks = mutableListOf<LocalTrack>()
+        val contentResolver: ContentResolver = context.contentResolver
+
+        // URI для доступа к аудиофайлам на устройстве
+        val uri: Uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+
+        // Поля, которые мы хотим получить для каждого трека
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DATA,
+            MediaStore.Audio.Media.DURATION
+        )
+
+        // Условие для фильтрации только музыкальных файлов
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+
+        // Сортировка по названию трека
+        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
+
+        var cursor: Cursor? = null
+        try {
+            // Запрос к ContentResolver
+            cursor = contentResolver.query(
+                uri,
+                projection,
+                selection,
+                null,
+                sortOrder
+            )
+
+            if (cursor == null) {
+                Log.e("LocalTRepository", "Cursor is null. Check URI and permissions.")
+                return@withContext emptyList()
+            }
+
+            // Обработка результата
+            cursor.use {
+                val idColumn = it.getColumnIndex(MediaStore.Audio.Media._ID)
+                val titleColumn = it.getColumnIndex(MediaStore.Audio.Media.TITLE)
+                val artistColumn = it.getColumnIndex(MediaStore.Audio.Media.ARTIST)
+                val dataColumn = it.getColumnIndex(MediaStore.Audio.Media.DATA)
+                val durationColumn = it.getColumnIndex(MediaStore.Audio.Media.DURATION)
+
+
+                if (idColumn == -1 || titleColumn == -1 || artistColumn == -1 || dataColumn == -1 || durationColumn == -1) {
+                    Log.e("LocalTRepository", "One or more columns not found in cursor.")
+                    return@withContext emptyList()
+                }
+
+                while (it.moveToNext()) {
+                    val id = it.getLong(idColumn)
+                    val title = it.getString(titleColumn)
+                    val artist = it.getString(artistColumn)
+                    val filePath = it.getString(dataColumn)
+                    val duration = it.getLong(durationColumn)
+                    // Получаем обложку трека
+                    val coverBitmap = getTrackCover(filePath)
+                    val coverPath = if (coverBitmap != null) {
+                        saveCoverToCache(coverBitmap, id.toString())
+                    } else {
+                        null
+                    }
+
+                    // Создаем объект LocalTrack и добавляем его в список
+                    tracks.add(
+                        LocalTrack(
+                            id = id,
+                            title = title,
+                            artist = artist,
+                            coverUrl = coverPath,
+                            filePath = filePath,
+                            duration = duration
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("LocalTRepository", "Error loading tracks", e)
+        } finally {
+            cursor?.close()
+        }
+
+        Log.d("LocalTRepository", "Loaded ${tracks.size} tracks")
         return@withContext tracks
     }
 
@@ -137,4 +240,5 @@ class LocalTRepository(private val context: Context) {
         }
         return file.absolutePath
     }
+
 }

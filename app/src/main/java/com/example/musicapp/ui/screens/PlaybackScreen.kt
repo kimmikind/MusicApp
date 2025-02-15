@@ -1,6 +1,8 @@
 package com.example.musicapp.ui.screens
 
-import android.media.session.PlaybackState
+
+import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,30 +34,39 @@ import androidx.compose.foundation.progressSemantics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.asImageBitmap
+import coil.compose.rememberAsyncImagePainter
+import com.example.musicapp.ui.viewmodels.LocalTrackViewModel
+import com.example.musicapp.ui.viewmodels.PlaybackViewModel.PlaybackState
+
 
 @Composable
-fun PlaybackScreen(trackId: Long?, source: String?) {
-    val viewModel: PlaybackViewModel = viewModel()
-    val context = LocalContext.current
+fun PlaybackScreen(trackId: Long?, source: String?,
+                   localTrackViewModel: LocalTrackViewModel) {
+    val playbackViewModel: PlaybackViewModel = viewModel()
+    //val localTrackViewModel: LocalTrackViewModel = viewModel()
 
-    // в зависимости от источника
-    val track = remember(trackId, source) {
+    // Получаем трек из StateFlow
+    val track by localTrackViewModel.currentTrack.collectAsState()
+
+    // Загружаем трек при изменении trackId и source
+    LaunchedEffect(key1 = trackId, key2 = source) {
+        if (trackId != null) {
         when (source) {
-            "local" -> {
-
-                // Например: repository.getLocalTrackById(trackId)
-            }
+            "local" -> trackId.let { localTrackViewModel.getTrackById(it) }
             "api" -> {
-
-                // Например: apiService.getTrackById(trackId)
+                // apiViewModel.getTrackById(trackId) // если есть API
             }
-            else -> null
+
         }
+            playbackViewModel.pause()
+        }
+
     }
 
-    val playbackState by viewModel.playbackState.collectAsState()
-    val currentPosition by viewModel.currentPosition.collectAsState()
-    val trackDuration by viewModel.trackDuration.collectAsState()
+    val playbackState by playbackViewModel.playbackState.collectAsState()
+    val currentPosition by playbackViewModel.currentPosition.collectAsState()
+    val trackDuration by playbackViewModel.trackDuration.collectAsState()
 
     Column(
         modifier = Modifier
@@ -64,10 +75,11 @@ fun PlaybackScreen(trackId: Long?, source: String?) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // обложка
+        // Обложка трека
         track?.coverUrl?.let { coverUrl ->
+            val bitmap = BitmapFactory.decodeFile(coverUrl)
             Image(
-                bitmap = /* Load image from URL */,
+                bitmap = bitmap.asImageBitmap(),
                 contentDescription = "Album Cover",
                 modifier = Modifier.size(200.dp),
                 contentScale = ContentScale.Crop
@@ -78,10 +90,9 @@ fun PlaybackScreen(trackId: Long?, source: String?) {
             modifier = Modifier.size(200.dp),
             contentScale = ContentScale.Crop
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
-        // название трека и исполнитель
+        // Название трека и исполнитель
         Text(text = track?.title ?: "Unknown Title", style = MaterialTheme.typography.headlineSmall)
         Text(text = track?.artist ?: "Unknown Artist", style = MaterialTheme.typography.bodyMedium)
 
@@ -90,7 +101,7 @@ fun PlaybackScreen(trackId: Long?, source: String?) {
         // Progress Bar
         Slider(
             value = currentPosition.toFloat(),
-            onValueChange = { viewModel.seekTo(it.toLong()) },
+            onValueChange = { playbackViewModel.seekTo(it.toLong()) },
             valueRange = 0f..trackDuration.toFloat(),
             modifier = Modifier.fillMaxWidth()
         )
@@ -111,25 +122,25 @@ fun PlaybackScreen(trackId: Long?, source: String?) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            IconButton(onClick = { viewModel.previousTrack() }) {
+            IconButton(onClick = { playbackViewModel.previousTrack() }) {
                 Icon(painter = painterResource(id = R.drawable.ic_previous), contentDescription = "Previous")
             }
 
             IconButton(onClick = {
                 when (playbackState) {
-                    is PlaybackState.Playing -> viewModel.pause()
-                    is PlaybackState.Paused -> viewModel.play()
+                    PlaybackState.Playing -> playbackViewModel.pause()
+                    PlaybackState.Paused -> playbackViewModel.play()
                 }
             }) {
                 Icon(
                     painter = painterResource(
-                        id = if (playbackState is PlaybackState.Playing) R.drawable.ic_pause else R.drawable.ic_play
+                        id = if (playbackState == PlaybackState.Playing) R.drawable.ic_pause else R.drawable.ic_play
                     ),
                     contentDescription = "Play/Pause"
                 )
             }
 
-            IconButton(onClick = { viewModel.nextTrack() }) {
+            IconButton(onClick = { playbackViewModel.nextTrack() }) {
                 Icon(painter = painterResource(id = R.drawable.ic_next), contentDescription = "Next")
             }
         }

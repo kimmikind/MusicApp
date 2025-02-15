@@ -23,7 +23,7 @@ fun BottomNavigation(
 ) {
     val listItems = listOf(BottomItem.LocalTracks,BottomItem.ApiTracks)
     NavigationBar(
-        containerColor = Color.White
+        containerColor = Color.Transparent
     )
     {
         val backStackEntry by navController.currentBackStackEntryAsState()

@@ -42,12 +42,13 @@ import com.example.musicapp.ui.viewmodels.PlaybackViewModel.PlaybackState
 
 @Composable
 fun PlaybackScreen(trackId: Long?, source: String?,
-                   localTrackViewModel: LocalTrackViewModel) {
-    val playbackViewModel: PlaybackViewModel = viewModel()
+                   localTrackViewModel: LocalTrackViewModel,
+                   playbackViewModel: PlaybackViewModel) {
+    //val playbackViewModel: PlaybackViewModel = viewModel()
     //val localTrackViewModel: LocalTrackViewModel = viewModel()
 
-    // Получаем трек из StateFlow
-    val track by localTrackViewModel.currentTrack.collectAsState()
+    // Получаем текущий трек из PlaybackViewModel
+    val currentTrack by playbackViewModel.currentTrack.collectAsState()
 
     // Загружаем трек при изменении trackId и source
     LaunchedEffect(key1 = trackId, key2 = source) {
@@ -64,6 +65,15 @@ fun PlaybackScreen(trackId: Long?, source: String?,
 
     }
 
+    // Получаем трек из StateFlow
+    val track by localTrackViewModel.currentTrack.collectAsState()
+    // Передаем трек в PlaybackViewModel
+    LaunchedEffect(key1 = track) {
+        track?.let {
+            playbackViewModel.setTrack(it) // Теперь трек гарантированно обновляется
+        }
+    }
+
     val playbackState by playbackViewModel.playbackState.collectAsState()
     val currentPosition by playbackViewModel.currentPosition.collectAsState()
     val trackDuration by playbackViewModel.trackDuration.collectAsState()
@@ -76,7 +86,7 @@ fun PlaybackScreen(trackId: Long?, source: String?,
         verticalArrangement = Arrangement.Center
     ) {
         // Обложка трека
-        track?.coverUrl?.let { coverUrl ->
+        currentTrack?.coverUrl?.let { coverUrl ->
             val bitmap = BitmapFactory.decodeFile(coverUrl)
             Image(
                 bitmap = bitmap.asImageBitmap(),
@@ -93,8 +103,8 @@ fun PlaybackScreen(trackId: Long?, source: String?,
         Spacer(modifier = Modifier.height(16.dp))
 
         // Название трека и исполнитель
-        Text(text = track?.title ?: "Unknown Title", style = MaterialTheme.typography.headlineSmall)
-        Text(text = track?.artist ?: "Unknown Artist", style = MaterialTheme.typography.bodyMedium)
+        Text(text = currentTrack?.title ?: "Unknown Title", style = MaterialTheme.typography.headlineSmall)
+        Text(text = currentTrack?.artist ?: "Unknown Artist", style = MaterialTheme.typography.bodyMedium)
 
         Spacer(modifier = Modifier.height(16.dp))
 

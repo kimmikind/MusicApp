@@ -12,6 +12,7 @@ import com.example.musicapp.ui.screens.ApiTracksScreen
 import com.example.musicapp.ui.screens.LocalTracksScreen
 import com.example.musicapp.ui.screens.PlaybackScreen
 import com.example.musicapp.ui.viewmodels.LocalTrackViewModel
+import com.example.musicapp.ui.viewmodels.PlaybackViewModel
 
 @Composable
 fun NavGraph(
@@ -20,6 +21,7 @@ fun NavGraph(
     val context = LocalContext.current
     val localRepository = LocalTRepository(context)
     val localViewModel = LocalTrackViewModel(localRepository)
+    val playbackViewModel = PlaybackViewModel(localViewModel)
 
     NavHost(navController = navHostController, startDestination = "local_tracks"){
         composable("local_tracks"){
@@ -43,7 +45,8 @@ fun NavGraph(
         ) { backStackEntry ->
             val trackId = backStackEntry.arguments?.getLong("trackId")
             val source = backStackEntry.arguments?.getString("source")
-            PlaybackScreen(trackId = trackId, source = source, localTrackViewModel = localViewModel)
+            PlaybackScreen(trackId = trackId, source = source, localTrackViewModel = localViewModel,
+                playbackViewModel = playbackViewModel)
         }
     }
 }

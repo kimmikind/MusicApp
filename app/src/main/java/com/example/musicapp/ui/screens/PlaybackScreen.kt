@@ -34,16 +34,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 
 @Composable
-fun PlaybackScreen(trackId: Long?) {
+fun PlaybackScreen(trackId: Long?, source: String?) {
     val viewModel: PlaybackViewModel = viewModel()
     val context = LocalContext.current
 
-    // получение трека
-    val track = remember {  }
+    // в зависимости от источника
+    val track = remember(trackId, source) {
+        when (source) {
+            "local" -> {
 
-    LaunchedEffect(key1 = track) {
-        if (track != null) {
-            viewModel.setTrackDuration(track.duration)
+                // Например: repository.getLocalTrackById(trackId)
+            }
+            "api" -> {
+
+                // Например: apiService.getTrackById(trackId)
+            }
+            else -> null
         }
     }
 

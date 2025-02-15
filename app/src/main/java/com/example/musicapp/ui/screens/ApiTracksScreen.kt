@@ -6,9 +6,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import com.example.musicapp.data.local.LocalTrack
+import com.example.musicapp.ui.viewmodels.LocalTrackViewModel
 
 @Composable
-fun ApiTracksScreen() {
+fun ApiTracksScreen(viewModel: ApiTrackViewModel, onTrackClick: (LocalTrack) -> Unit
+) {
     Text(
         modifier = Modifier.fillMaxSize().wrapContentSize(),
         text = "Api",

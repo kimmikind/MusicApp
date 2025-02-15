@@ -38,4 +38,13 @@ class LocalTrackViewModel(private val repository: LocalTRepository) : ViewModel(
              _filteredTracks.value = repository.searchTracks(query)
          }
     }
+
+    private val _currentTrack = MutableStateFlow<LocalTrack?>(null)
+    val currentTrack: StateFlow<LocalTrack?> = _currentTrack.asStateFlow()
+
+    fun loadTrackById(trackId: Long) {
+        viewModelScope.launch {
+            _currentTrack.value = repository.getLocalTrackById(trackId)
+        }
+    }
 }

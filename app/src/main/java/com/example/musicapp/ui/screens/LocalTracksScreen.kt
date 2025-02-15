@@ -15,11 +15,15 @@ import com.example.musicapp.ui.items.TrackList
 import com.example.musicapp.ui.screens.local.LocalTrackViewModel
 
 @Composable
-fun LocalTrackScreen(viewModel: LocalTrackViewModel, onTrackClick: (LocalTrack) -> Unit) {
+fun LocalTracksScreen(
+    viewModel: LocalTrackViewModel, onTrackClick: (LocalTrack) -> Unit
+) {
     val tracks by viewModel.filteredTracks.collectAsState()
-
     Column(modifier = Modifier.fillMaxSize()) {
+        // Поисковая строка
         SearchBar(onSearch = { query -> viewModel.searchTracks(query) })
+
+        // Список треков
         TrackList(tracks = tracks, onTrackClick = onTrackClick)
     }
 }

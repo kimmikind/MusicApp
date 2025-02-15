@@ -15,6 +15,14 @@ import java.io.File
 class LocalTRepository(private val context: Context) {
 
     /**
+     * Получает локальный трек по его ID.
+     */
+    suspend fun getLocalTrackById(trackId: Long): LocalTrack? = withContext(Dispatchers.IO) {
+        val allTracks = getAllTracks()
+        return@withContext allTracks.find { it.id == trackId }
+    }
+
+    /**
      * Получает все локальные треки из хранилища устройства.
      */
     suspend fun getAllTracks(): List<LocalTrack> = withContext(Dispatchers.IO) {

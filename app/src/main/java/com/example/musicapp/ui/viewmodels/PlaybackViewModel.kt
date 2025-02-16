@@ -1,18 +1,25 @@
 package com.example.musicapp.ui.viewmodels
 
 import android.app.Application
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.media.MediaPlayer
 import android.media.browse.MediaBrowser
 import android.media.session.PlaybackState
 import android.util.Log
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.musicapp.R
 import com.example.musicapp.data.ApiTrack
 import com.example.musicapp.data.LocalTrack
 import com.example.musicapp.data.Track
+import com.example.musicapp.service.MusicService
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +32,7 @@ import kotlinx.coroutines.delay
 class PlaybackViewModel(
     private val localTrackViewModel: LocalTrackViewModel,
     private val apiTracksViewModel: ApiTracksViewModel,
+    private val context: Context
 ) : ViewModel() {
 
 
@@ -109,14 +117,28 @@ class PlaybackViewModel(
     }
 
     fun play() {
+        Log.d("PlaybackViewModel", "play() вызван")
         mediaPlayer.start()
+        val intent = Intent(context, MusicService::class.java).apply {
+            action = MusicService.ACTION_PLAY
+        }
+        context.startService(intent)
         _playbackState.value = PlaybackState.Playing
+
     }
 
     fun pause() {
+        Log.d("PlaybackViewModel", "pause() вызван")
         mediaPlayer.pause()
+        val intent = Intent(context, MusicService::class.java).apply {
+            action = MusicService.ACTION_PAUSE
+        }
+        context.startService(intent)
         _playbackState.value = PlaybackState.Paused
+
     }
+
+
 
     fun seekTo(position: Long) {
         mediaPlayer.seekTo(position.toInt())
@@ -130,6 +152,10 @@ class PlaybackViewModel(
             _currentTrack.value = _tracks.value[currentTrackIndex]
             prepareMediaPlayer(_tracks.value[currentTrackIndex].previewUrl)
         }
+        val intent = Intent(context, MusicService::class.java).apply {
+            action = MusicService.ACTION_NEXT
+        }
+        context.startService(intent)
     }
 
     fun previousTrack() {
@@ -138,6 +164,11 @@ class PlaybackViewModel(
             _currentTrack.value = _tracks.value[currentTrackIndex]
             prepareMediaPlayer(_tracks.value[currentTrackIndex].previewUrl)
         }
+
+        val intent = Intent(context, MusicService::class.java).apply {
+            action = MusicService.ACTION_PREVIOUS
+        }
+        context.startService(intent)
     }
 
     override fun onCleared() {

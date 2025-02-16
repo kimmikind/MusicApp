@@ -24,7 +24,7 @@ fun NavGraph(
     val localRepository = LocalTRepository(context)
     val localViewModel = LocalTrackViewModel(localRepository)
     val apiViewModel = ApiTracksViewModel()
-    val playbackViewModel = PlaybackViewModel(localViewModel, apiViewModel)
+    val playbackViewModel = PlaybackViewModel(localViewModel, apiViewModel,context)
 
     NavHost(navController = navHostController, startDestination = "local_tracks"){
         composable("local_tracks"){

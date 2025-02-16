@@ -13,6 +13,11 @@ Compose, Compose Navigation, Coil, Gson, Retrofit, Kotlin Coroutines/Flow, Media
 3. Откройте проект в Android Studio.
 4. Запустите приложение на эмуляторе или устройстве.
 
+- **Система сборки**: Gradle (Kotlin DSL)
+- **Версия Gradle**: 8.9
+- **Версия Android Gradle Plugin**: 8.7.3
+- **Целевая версия SDK**: Android 14 (API 34)
+
 Ссылка на apk-файл на диске: https://disk.yandex.ru/d/QCH7xAJawK8l2g
 ## Возникшие сложности
 Не до конца реализовано фоновое уведомление с переключателями и статус баром - только кнопки Play/Pause синхронизированы.

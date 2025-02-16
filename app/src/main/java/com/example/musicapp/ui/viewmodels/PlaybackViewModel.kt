@@ -1,41 +1,38 @@
 package com.example.musicapp.ui.viewmodels
 
+import android.app.Application
+import android.content.Context
 import android.media.MediaPlayer
+import android.media.browse.MediaBrowser
 import android.media.session.PlaybackState
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.musicapp.data.ApiTrack
 import com.example.musicapp.data.LocalTrack
+import com.example.musicapp.data.Track
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import com.example.musicapp.data.repository.LocalTRepository
-import kotlinx.coroutines.flow.count
 
-class PlaybackViewModel (private val localTrackViewModel: LocalTrackViewModel): ViewModel() {
+import kotlinx.coroutines.delay
+
+
+class PlaybackViewModel(
+    private val localTrackViewModel: LocalTrackViewModel,
+    private val apiTracksViewModel: ApiTracksViewModel,
+) : ViewModel() {
+
+
 
     private val mediaPlayer = MediaPlayer()
 
-    private val _currentTrack = MutableStateFlow<LocalTrack?>(null)
-    val currentTrack: StateFlow<LocalTrack?> = _currentTrack.asStateFlow()
-
-
-    private val _trackList = MutableStateFlow<List<LocalTrack>>(emptyList())
-    val trackList: StateFlow<List<LocalTrack>> = _trackList.asStateFlow()
-    // Получаем список треков из LocalTrackViewModel
-
-    init {
-        // Загружаем список треков при инициализации
-        viewModelScope.launch {
-            localTrackViewModel.tracks.collect { tracks ->
-                Log.d("PlaybackViewModel", "Список треков загружен: ${tracks.size} треков")
-                _trackList.value = tracks
-            }
-        }
-
-
-    }
+    private val _currentTrack = MutableStateFlow<Track?>(null)
+    val currentTrack: StateFlow<Track?> = _currentTrack.asStateFlow()
 
     private val _playbackState = MutableStateFlow<PlaybackState>(PlaybackState.Paused)
     val playbackState: StateFlow<PlaybackState> = _playbackState
@@ -45,19 +42,70 @@ class PlaybackViewModel (private val localTrackViewModel: LocalTrackViewModel): 
 
     private val _trackDuration = MutableStateFlow(0L)
     val trackDuration: StateFlow<Long> = _trackDuration
+    // Список треков и индекс текущего трека
+    private val _tracks = MutableStateFlow<List<Track>>(emptyList())
+    private var currentTrackIndex = 0
 
-
-    fun setTrack(track: LocalTrack) {
-        Log.d("PlaybackViewModel", "Установлен трек: ${track.title}, путь: ${track.filePath}")
-        _currentTrack.value = track
-        mediaPlayer.reset()
-        mediaPlayer.setDataSource(track.filePath) // Убедитесь, что filePath корректен
-        mediaPlayer.prepareAsync()
-        mediaPlayer.setOnPreparedListener {
-            _trackDuration.value = it.duration.toLong()
-            Log.d("PlaybackViewModel", "Трек готов к воспроизведению: ${track.title}, длительность: ${it.duration} мс")
-            play()
+    init {
+        // Слушаем изменения в локальных треках
+        viewModelScope.launch {
+            localTrackViewModel.tracks.collect { tracks ->
+                _tracks.value = tracks.map { it.toTrack() }
+                Log.d("PlaybackViewModel", "Список локальных треков обновлен: ${tracks.size} треков")
+            }
         }
+
+        // Слушаем изменения в треках из API
+        viewModelScope.launch {
+            apiTracksViewModel.tracks.collect { tracks ->
+                _tracks.value = tracks
+                Log.d("PlaybackViewModel", "Список API треков обновлен: ${tracks.size} треков")
+            }
+        }
+
+        // Обновляем текущую позицию воспроизведения
+        viewModelScope.launch {
+            while (true) {
+                if (mediaPlayer.isPlaying) {
+                    _currentPosition.value = mediaPlayer.currentPosition.toLong()
+                }
+                delay(1000) // Обновляем каждую секунду
+            }
+        }
+
+
+    }
+
+    // Устанавливаем трек, если он из локальных данных
+    fun setLocalTrack(track: LocalTrack) {
+        val newTrack = track.toTrack()
+        _currentTrack.value = newTrack
+        prepareMediaPlayer(newTrack.previewUrl)
+    }
+
+    // Устанавливаем трек, если он из API
+    fun setApiTrack(track: Track) {
+        Log.d("PlaybackViewModel", "Setting API track: $track")
+        //val newTrack = track.toTrack()
+        _currentTrack.value = track
+        Log.d("PlaybackViewModel", "Current track after setting: ${_currentTrack.value}")
+        Log.e("RRR","$track")
+        prepareMediaPlayer(track.previewUrl)
+    }
+
+    private fun prepareMediaPlayer(url: String) {
+        Log.d("PlaybackViewModel", "Preparing MediaPlayer with URL: $url")
+
+            mediaPlayer.reset()
+            mediaPlayer.setDataSource(url)
+            mediaPlayer.prepareAsync()
+            mediaPlayer.setOnPreparedListener {
+                Log.d("PlaybackViewModel", "MediaPlayer prepared, duration: ${it.duration}")
+                _trackDuration.value = it.duration.toLong()
+                play()
+            }
+
+
     }
 
     fun play() {
@@ -76,34 +124,19 @@ class PlaybackViewModel (private val localTrackViewModel: LocalTrackViewModel): 
     }
 
     fun nextTrack() {
-        val currentTrack = _currentTrack.value
-        val trackList = _trackList.value
-
-        if (currentTrack != null && trackList.isNotEmpty()) {
-            val currentIndex = trackList.indexOf(currentTrack)
-            val nextIndex = if (currentIndex < trackList.size - 1) currentIndex + 1 else 0
-
-            val nextTrack = trackList[nextIndex]
-            Log.d("PlaybackViewModel", "Переключение на следующий трек: ${nextTrack.title}")
-            setTrack(nextTrack)
-            play() // Автоматически воспроизводим следующий трек
-        }
-        else {
-            Log.d("PlaybackViewModel", "Невозможно переключить трек: список треков пуст или текущий трек не найден")
+        // Логика переключения на следующий трек (локальный или из API)
+        if (_tracks.value.isNotEmpty()) {
+            currentTrackIndex = (currentTrackIndex + 1) % _tracks.value.size
+            _currentTrack.value = _tracks.value[currentTrackIndex]
+            prepareMediaPlayer(_tracks.value[currentTrackIndex].previewUrl)
         }
     }
 
     fun previousTrack() {
-        val currentTrack = _currentTrack.value
-        val trackList = _trackList.value
-
-        if (currentTrack != null && trackList.isNotEmpty()) {
-            val currentIndex = trackList.indexOf(currentTrack)
-            val previousIndex = if (currentIndex > 0) currentIndex - 1 else trackList.size - 1
-
-            val previousTrack = trackList[previousIndex]
-            setTrack(previousTrack)
-            play() // Автоматически воспроизводим предыдущий трек
+        if (_tracks.value.isNotEmpty()) {
+            currentTrackIndex = (currentTrackIndex - 1 + _tracks.value.size) % _tracks.value.size
+            _currentTrack.value = _tracks.value[currentTrackIndex]
+            prepareMediaPlayer(_tracks.value[currentTrackIndex].previewUrl)
         }
     }
 
@@ -111,9 +144,22 @@ class PlaybackViewModel (private val localTrackViewModel: LocalTrackViewModel): 
         super.onCleared()
         mediaPlayer.release()
     }
+
     sealed class PlaybackState {
         object Playing : PlaybackState()
         object Paused : PlaybackState()
     }
+    fun LocalTrack.toTrack() = Track(
+        id = id,
+        title = title,
+        artist = artist,
+        coverUrl = coverUrl,
+        previewUrl = filePath
+    )
+
+
+
 }
+
+
 

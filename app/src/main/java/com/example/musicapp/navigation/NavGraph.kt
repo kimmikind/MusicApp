@@ -1,5 +1,6 @@
 package com.example.musicapp.navigation
 
+import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
@@ -22,8 +23,8 @@ fun NavGraph(
     val context = LocalContext.current
     val localRepository = LocalTRepository(context)
     val localViewModel = LocalTrackViewModel(localRepository)
-    val playbackViewModel = PlaybackViewModel(localViewModel)
     val apiViewModel = ApiTracksViewModel()
+    val playbackViewModel = PlaybackViewModel(localViewModel, apiViewModel)
 
     NavHost(navController = navHostController, startDestination = "local_tracks"){
         composable("local_tracks"){
@@ -48,7 +49,7 @@ fun NavGraph(
             val trackId = backStackEntry.arguments?.getLong("trackId")
             val source = backStackEntry.arguments?.getString("source")
             PlaybackScreen(trackId = trackId, source = source, localTrackViewModel = localViewModel,
-                playbackViewModel = playbackViewModel)
+                playbackViewModel = playbackViewModel, apiTrackViewModel = apiViewModel)
         }
     }
 }

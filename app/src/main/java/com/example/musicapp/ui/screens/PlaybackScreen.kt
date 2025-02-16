@@ -11,30 +11,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.musicapp.R
 import com.example.musicapp.ui.viewmodels.PlaybackViewModel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.progressSemantics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.asImageBitmap
+import coil.compose.rememberAsyncImagePainter
+import coil.compose.rememberImagePainter
+import com.example.musicapp.data.ApiTrack
+import com.example.musicapp.data.Track
+import com.example.musicapp.data.api.DeezerApi
+import com.example.musicapp.ui.viewmodels.ApiTracksViewModel
 import com.example.musicapp.ui.viewmodels.LocalTrackViewModel
 import com.example.musicapp.ui.viewmodels.PlaybackViewModel.PlaybackState
 
@@ -42,9 +42,9 @@ import com.example.musicapp.ui.viewmodels.PlaybackViewModel.PlaybackState
 @Composable
 fun PlaybackScreen(trackId: Long?, source: String?,
                    localTrackViewModel: LocalTrackViewModel,
-                   playbackViewModel: PlaybackViewModel) {
-    //val playbackViewModel: PlaybackViewModel = viewModel()
-    //val localTrackViewModel: LocalTrackViewModel = viewModel()
+                   playbackViewModel: PlaybackViewModel,
+                   apiTrackViewModel : ApiTracksViewModel) {
+
 
     // Получаем текущий трек из PlaybackViewModel
     val currentTrack by playbackViewModel.currentTrack.collectAsState()
@@ -53,9 +53,16 @@ fun PlaybackScreen(trackId: Long?, source: String?,
     LaunchedEffect(key1 = trackId, key2 = source) {
         if (trackId != null) {
         when (source) {
-            "local" -> trackId.let { localTrackViewModel.getTrackById(it) }
+            "local" -> trackId.let {
+                Log.d("PlaybackScreen", "Loading local track with id: $trackId")
+                localTrackViewModel.getTrackById(it) }
             "api" -> {
-                // apiViewModel.getTrackById(trackId) // если есть API
+                trackId.let {
+                    Log.d("PlaybackScreen", "Loading API track with id: $trackId")
+                    // Загружаем трек из API
+                    apiTrackViewModel.loadTrackById(it)
+                }
+
             }
 
         }
@@ -64,14 +71,33 @@ fun PlaybackScreen(trackId: Long?, source: String?,
 
     }
 
-    // Получаем трек из StateFlow
-    val track by localTrackViewModel.currentTrack.collectAsState()
-    // Передаем трек в PlaybackViewModel
-    LaunchedEffect(key1 = track) {
-        track?.let {
-            playbackViewModel.setTrack(it) // Теперь трек гарантированно обновляется
+    // Получаем трек из StateFlow для локальных данных
+    val localTrack by localTrackViewModel.currentTrack.collectAsState()
+    val apiTrack by apiTrackViewModel.currentTrack.collectAsState()
+
+    // Устанавливаем трек в PlaybackViewModel в зависимости от источника
+    LaunchedEffect(key1 = localTrack, key2 = apiTrack) {
+        Log.d("PlaybackScreen", "LaunchedEffect сработал: localTrack = $localTrack, apiTrack = $apiTrack")
+        when (source) {
+
+            "local" -> {
+
+                localTrack?.let {
+                    Log.d("PlaybackScreen", "Устанавливаем локальный трек в PlaybackViewModel: $it")
+                    playbackViewModel.setLocalTrack(it)
+                }
+            }
+            "api" -> {
+                apiTrack?.let {
+                    Log.d("PlaybackScreen", "Устанавливаем api трек в PlaybackViewModel: $it")
+                    playbackViewModel.setApiTrack(it)
+                }
+            }
         }
     }
+
+
+
 
     val playbackState by playbackViewModel.playbackState.collectAsState()
     val currentPosition by playbackViewModel.currentPosition.collectAsState()
@@ -84,21 +110,36 @@ fun PlaybackScreen(trackId: Long?, source: String?,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Обложка трека
-        currentTrack?.coverUrl?.let { coverUrl ->
-            val bitmap = BitmapFactory.decodeFile(coverUrl)
+        val coverUrl = currentTrack?.coverUrl // Получаем URL картинки
+
+        if (coverUrl != null) {
+            if (coverUrl.startsWith("file://")) {
+                // Если URL это локальный путь
+                val bitmap = BitmapFactory.decodeFile(coverUrl.removePrefix("file://"))
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Album Cover",
+                    modifier = Modifier.size(200.dp),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                // Если это URL с API
+                Image(
+                    painter = rememberAsyncImagePainter(coverUrl),
+                    contentDescription = "Album Cover",
+                    modifier = Modifier.size(200.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        } else {
+            // Если нет URL, используем изображение-заполнитель
             Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "Album Cover",
+                painter = painterResource(id = R.drawable.placeholder),
+                contentDescription = "Placeholder",
                 modifier = Modifier.size(200.dp),
                 contentScale = ContentScale.Crop
             )
-        } ?: Image(
-            painter = painterResource(id = R.drawable.placeholder),
-            contentDescription = "Placeholder",
-            modifier = Modifier.size(200.dp),
-            contentScale = ContentScale.Crop
-        )
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         // Название трека и исполнитель

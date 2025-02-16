@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.musicapp"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.musicapp"
@@ -59,8 +59,11 @@ dependencies {
 
     //navigation
     implementation (libs.androidx.navigation.compose)
-
+    //get album cover
+    //implementation(libs.coil.compose)
     //retrofit
     implementation (libs.retrofit)
     implementation (libs.converter.gson)
+    implementation(libs.coil.kt.coil.compose)
+
 }

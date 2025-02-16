@@ -1,23 +1,29 @@
 package com.example.musicapp.ui.viewmodels
 
+import android.util.Log
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.musicapp.data.ApiTrack
 import com.example.musicapp.data.Track
 import com.example.musicapp.data.api.DeezerApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ApiTracksViewModel : ViewModel() {
 
-    private val _tracks = mutableStateListOf<Track>()
-    val tracks: List<Track> get() = _tracks
+    private val _tracks = MutableStateFlow<List<Track>>(emptyList())
+    val tracks: StateFlow<List<Track>> = _tracks.asStateFlow()
 
-    private val _isLoading = mutableStateOf(false)
-    val isLoading: State<Boolean> get() = _isLoading
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _error = mutableStateOf<String?>(null)
-    val error: State<String?> get() = _error
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
     fun searchTracks(query: String) {
         viewModelScope.launch {
@@ -25,18 +31,17 @@ class ApiTracksViewModel : ViewModel() {
             _error.value = null
             try {
                 val response = DeezerApi.retrofitService.searchTracks(query)
-                _tracks.clear()
-                _tracks.addAll(response.data.map { track ->
+                _tracks.value = response.body()?.data?.map { apiTrack :ApiTrack ->
                     Track(
-                        id = track.id,
-                        title = track.title,
-                        artist = track.artist.name,
-                        album = track.album.cover_medium,
-                        preview = track.preview
+                        id = apiTrack.id,
+                        title = apiTrack.title,
+                        artist = apiTrack.artist.name,
+                        coverUrl = apiTrack.album.cover_medium,
+                        previewUrl = apiTrack.preview
                     )
-                })
+                } ?: emptyList()
             } catch (e: Exception) {
-                _error.value = e.message
+                _error.value = e.message ?: "Unknown error occurred"
             } finally {
                 _isLoading.value = false
             }
@@ -48,26 +53,24 @@ class ApiTracksViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             try {
-                // Вызов метода getTopTracks() через DeezerApi
                 val response = DeezerApi.retrofitService.getTopTracks()
                 if (response.isSuccessful) {
-                    _tracks.clear()
-                    response.body()?.tracks?.data?.forEach { track ->
-                        _tracks.add(
-                            Track(
-                                id = track.id,
-                                title = track.title,
-                                artist = track.artist.name,
-                                album = track.album.cover_medium,
-                                preview = track.preview
-                            )
+                    _tracks.value = response.body()?.tracks?.data?.map { apiTrack :ApiTrack  ->
+                        Track(
+                            id = apiTrack.id,
+                            title = apiTrack.title,
+                            artist = apiTrack.artist.name,
+                            coverUrl = apiTrack.album.cover_medium,
+                            previewUrl = apiTrack.preview
                         )
-                    }
+
+                    } ?: emptyList()
+
                 } else {
                     _error.value = "Failed to load tracks: ${response.message()}"
                 }
             } catch (e: Exception) {
-                _error.value = e.message
+                _error.value = e.message ?: "Unknown error occurred"
             } finally {
                 _isLoading.value = false
             }

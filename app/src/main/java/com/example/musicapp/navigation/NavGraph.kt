@@ -11,6 +11,7 @@ import com.example.musicapp.data.repository.LocalTRepository
 import com.example.musicapp.ui.screens.ApiTracksScreen
 import com.example.musicapp.ui.screens.LocalTracksScreen
 import com.example.musicapp.ui.screens.PlaybackScreen
+import com.example.musicapp.ui.viewmodels.ApiTracksViewModel
 import com.example.musicapp.ui.viewmodels.LocalTrackViewModel
 import com.example.musicapp.ui.viewmodels.PlaybackViewModel
 
@@ -22,6 +23,7 @@ fun NavGraph(
     val localRepository = LocalTRepository(context)
     val localViewModel = LocalTrackViewModel(localRepository)
     val playbackViewModel = PlaybackViewModel(localViewModel)
+    val apiViewModel = ApiTracksViewModel()
 
     NavHost(navController = navHostController, startDestination = "local_tracks"){
         composable("local_tracks"){
@@ -30,10 +32,10 @@ fun NavGraph(
             })
         }
         composable("api_tracks"){
-            ApiTracksScreen(
-                /*onTrackClick = { viewModel = apiViewModel, track ->
+            ApiTracksScreen( viewModel = apiViewModel,
+                onTrackClick = {  track ->
                     navHostController.navigate("playback/${track.id}/api")
-                }*/
+                }
             )
         }
         composable(

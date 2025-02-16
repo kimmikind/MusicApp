@@ -35,7 +35,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.asImageBitmap
-import coil.compose.rememberAsyncImagePainter
 import com.example.musicapp.ui.viewmodels.LocalTrackViewModel
 import com.example.musicapp.ui.viewmodels.PlaybackViewModel.PlaybackState
 

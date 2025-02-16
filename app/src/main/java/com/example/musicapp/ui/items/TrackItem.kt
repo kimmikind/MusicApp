@@ -1,5 +1,6 @@
 package com.example.musicapp.ui.items
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,8 +19,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+
+
+
 import com.example.musicapp.R
+import com.example.musicapp.data.ApiTrack
 import com.example.musicapp.data.LocalTrack
+import com.example.musicapp.data.Track
 
 @Composable
 fun TrackItem(track: LocalTrack, onClick: () -> Unit) {
@@ -38,6 +44,46 @@ fun TrackItem(track: LocalTrack, onClick: () -> Unit) {
                 .size(56.dp)
                 .clip(RoundedCornerShape(8.dp))
         )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Название трека и исполнитель
+        Column {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = track.artist,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun TrackItem1(track: Track, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Обложка трека
+        AsyncImage(
+            model = track.coverUrl ?: R.drawable.placeholder, // Заглушка, если обложки нет
+            contentDescription = "Track Cover",
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(8.dp))
+        )
+        Log.e("RRRR","${track.coverUrl}")
 
         Spacer(modifier = Modifier.width(16.dp))
 

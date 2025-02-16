@@ -1,0 +1,19 @@
+package com.example.musicapp.data.api
+
+import com.example.musicapp.data.SearchTracksResponse
+import com.example.musicapp.data.TopTracksResponse
+import okhttp3.Response
+import retrofit2.http.GET
+import retrofit2.http.Query
+
+
+interface DeezerApiService {
+
+    // Метод для получения популярных треков
+    @GET("chart")
+    suspend fun getTopTracks(): Response<TopTracksResponse>
+
+    // Метод для поиска треков по запросу
+    @GET("search")
+    suspend fun searchTracks(@Query("q") query: String): Response<SearchTracksResponse>
+}

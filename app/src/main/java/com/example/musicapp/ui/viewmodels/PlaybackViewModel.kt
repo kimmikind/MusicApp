@@ -3,14 +3,21 @@ package com.example.musicapp.ui.viewmodels
 import android.app.Application
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.MediaPlayer
 import android.media.browse.MediaBrowser
 import android.media.session.PlaybackState
+import android.os.Build
+import android.os.Looper
+import android.os.Messenger
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
 import androidx.core.content.ContextCompat.getSystemService
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
@@ -35,6 +42,26 @@ class PlaybackViewModel(
     private val context: Context
 ) : ViewModel() {
 
+    private val playbackStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            Log.d("PlaybackViewModel", "BroadcastReceiver получил intent: ${intent?.action}")
+            when (intent?.action) {
+                MusicService.ACTION_PLAY -> {
+                    Log.d("PlaybackViewModel", "Получено действие PLAY")
+                    _playbackState.value = PlaybackState.Playing
+                }
+                MusicService.ACTION_PAUSE -> {
+                    Log.d("PlaybackViewModel", "Получено действие PAUSE")
+                    _playbackState.value = PlaybackState.Paused
+                }
+                MusicService.ACTION_UPDATE_PROGRESS -> {
+                    val currentPosition = intent.getLongExtra("currentPosition", 0L)
+                    _currentPosition.value = currentPosition
+                }
+            }
+        }
+    }
+
 
 
     private val mediaPlayer = MediaPlayer()
@@ -55,6 +82,18 @@ class PlaybackViewModel(
     private var currentTrackIndex = 0
 
     init {
+        // Регистрируем BroadcastReceiver
+        val filter = IntentFilter().apply {
+            addAction(MusicService.ACTION_PLAY)
+            addAction(MusicService.ACTION_PAUSE)
+            addAction(MusicService.ACTION_UPDATE_PROGRESS)
+            addAction(MusicService.ACTION_SEEK)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Для Android 12 и выше
+            context.registerReceiver(playbackStateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        }
+
         // Слушаем изменения в локальных треках
         viewModelScope.launch {
             localTrackViewModel.tracks.collect { tracks ->
@@ -76,6 +115,7 @@ class PlaybackViewModel(
             while (true) {
                 if (mediaPlayer.isPlaying) {
                     _currentPosition.value = mediaPlayer.currentPosition.toLong()
+
                 }
                 delay(1000) // Обновляем каждую секунду
             }
@@ -143,6 +183,11 @@ class PlaybackViewModel(
     fun seekTo(position: Long) {
         mediaPlayer.seekTo(position.toInt())
         _currentPosition.value = position
+        val intent = Intent(context, MusicService::class.java).apply {
+            action = MusicService.ACTION_SEEK
+            putExtra("position", position)
+        }
+        context.startService(intent)
     }
 
     fun nextTrack() {
@@ -174,6 +219,7 @@ class PlaybackViewModel(
     override fun onCleared() {
         super.onCleared()
         mediaPlayer.release()
+        context.unregisterReceiver(playbackStateReceiver)
     }
 
     sealed class PlaybackState {

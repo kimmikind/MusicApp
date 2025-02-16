@@ -14,11 +14,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
+import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.util.NotificationUtil.createNotificationChannel
 
 class MusicService : Service() {
+
 
     companion object {
         const val CHANNEL_ID = "music_channel"
@@ -26,10 +30,27 @@ class MusicService : Service() {
         const val ACTION_PAUSE = "action_pause"
         const val ACTION_NEXT = "action_next"
         const val ACTION_PREVIOUS = "action_previous"
+        const val ACTION_UPDATE_PROGRESS = "update_progress"
+        const val ACTION_SEEK = "action_seek"
     }
 
     private lateinit var mediaPlayer: MediaPlayer
     private lateinit var notificationManager: NotificationManager
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateProgressRunnable = object : Runnable {
+        override fun run() {
+            if (mediaPlayer.isPlaying) {
+                val currentPosition = mediaPlayer.currentPosition.toLong()
+                val duration = mediaPlayer.duration.toLong()
+                updateNotification("Playing", currentPosition, duration)
+                sendBroadcast(Intent(ACTION_UPDATE_PROGRESS).apply {
+                    putExtra("currentPosition", currentPosition)
+                    setPackage(packageName)
+                })
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -39,7 +60,6 @@ class MusicService : Service() {
         createNotificationChannel()
 
     }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d("MusicService", "onStartCommand вызван с action: ${intent?.action}")
         when (intent?.action) {
@@ -59,6 +79,10 @@ class MusicService : Service() {
                 Log.d("MusicService", "Получена команда PREVIOUS")
                 previousTrack()
             }
+            ACTION_SEEK -> {
+                val position = intent.getLongExtra("position", 0L)
+                seekTo(position)
+            }
         }
         return START_STICKY
     }
@@ -67,14 +91,37 @@ class MusicService : Service() {
 
     private fun play() {
         Log.d("MusicService", "play() вызван")
-        //mediaPlayer.start()
-        updateNotification("Playing")
+        mediaPlayer.start()
+        updateNotification("Playing", mediaPlayer.currentPosition.toLong(), mediaPlayer.duration.toLong())
+        startProgressUpdates()
+        sendBroadcast(Intent(ACTION_PLAY).apply {
+            setPackage(packageName) // Указываем пакет приложения
+        })
     }
 
     private fun pause() {
         Log.d("MusicService", "pause() вызван")
-        //mediaPlayer.pause()
-        updateNotification("Paused")
+        mediaPlayer.pause()
+        updateNotification("Paused", mediaPlayer.currentPosition.toLong(), mediaPlayer.duration.toLong())
+        stopProgressUpdates()
+        sendBroadcast(Intent(ACTION_PAUSE).apply {
+            setPackage(packageName) // Указываем пакет приложения
+        })
+    }
+    private fun seekTo(position: Long) {
+        Log.d("MusicService", "seekTo вызван, позиция: $position")
+        mediaPlayer.seekTo(position.toInt())
+        sendBroadcast(Intent(ACTION_UPDATE_PROGRESS).apply {
+            putExtra("currentPosition", position)
+            setPackage(packageName)
+        })
+    }
+    private fun startProgressUpdates() {
+        handler.post(updateProgressRunnable)
+    }
+
+    private fun stopProgressUpdates() {
+        handler.removeCallbacks(updateProgressRunnable)
     }
 
     private fun nextTrack() {
@@ -87,7 +134,8 @@ class MusicService : Service() {
         updateNotification("Playing previous track")
     }
 
-    private fun updateNotification(status: String) {
+
+    private fun updateNotification(status: String, currentPosition: Long = 0L, duration: Long = 0L) {
         Log.d("MusicService", "Обновление уведомления: $status")
         val notificationIntent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT
@@ -127,6 +175,7 @@ class MusicService : Service() {
             .setStyle(androidx.media.app.NotificationCompat.MediaStyle()
                 .setShowActionsInCompactView(1, 2, 3)
                 .setMediaSession(mediaSession.sessionToken)) // Добавь MediaSession, если есть
+            .setProgress(duration.toInt(), currentPosition.toInt(), false) // Добавляем прогресс
             .build()
 
         startForeground(1, notification)

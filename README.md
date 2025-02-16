@@ -12,6 +12,8 @@ Compose, Compose Navigation, Coil, Gson, Retrofit, Kotlin Coroutines/Flow, Media
    git clone https://github.com/kimmikind/MusicApp.git
 3. Откройте проект в Android Studio.
 4. Запустите приложение на эмуляторе или устройстве.
+
+Ссылка на apk-файл на диске: https://disk.yandex.ru/d/QCH7xAJawK8l2g
 ## Возникшие сложности:
 Не до конца реализовано фоновое уведомление с переключателями и статус баром - только кнопки Play/Pause синхронизированы.
 Не совсем понимаю, как корректно обрабатывать данные viewmodel, чтобы не приходилось передавать их через параметры и не происходило утечек. Пошла через простой, но ненадежный способ.
